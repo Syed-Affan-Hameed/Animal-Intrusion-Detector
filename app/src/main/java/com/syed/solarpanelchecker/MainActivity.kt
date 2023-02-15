@@ -1,11 +1,14 @@
 package com.syed.solarpanelchecker
 
+import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
@@ -26,7 +29,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var imageView: ImageView;
     lateinit var uploadBtn : Button;
     lateinit var captureBtn : Button;
+    lateinit var galleryBtn :Button;
     lateinit var imageUri: Uri;
+    lateinit var responseTV: TextView;
     private val contract=registerForActivityResult(ActivityResultContracts.TakePicture()){
         imageView.setImageURI(null)
         imageView.setImageURI(imageUri)
@@ -38,26 +43,46 @@ class MainActivity : AppCompatActivity() {
         imageView=findViewById(R.id.imageView);
         captureBtn=findViewById(R.id.captureBtn);
         uploadBtn=findViewById(R.id.uploadBtn);
+        galleryBtn=findViewById(R.id.galleryBtn);
         imageUri=createImageUri()!!;
+        responseTV=findViewById(R.id.responseTV)
         captureBtn.setOnClickListener {
             contract.launch(imageUri);
 
         }
+
         uploadBtn.setOnClickListener {
             upload()
         }
+        galleryBtn.setOnClickListener {
+            val intent= Intent(Intent.ACTION_PICK);
+            intent.type="image/*"
+            startActivityForResult(intent,111)
+        }
     }
+
+
+
     private fun createImageUri():Uri?{
         val image= File(applicationContext.filesDir,"camera_photo.jpg");
         return FileProvider.getUriForFile(applicationContext,"com.syed.solarpanelchecker.fileProvider",image)
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==111){
+            imageUri=data?.data!!;
+            imageView.setImageURI(null);
+            imageView.setImageURI(data?.data)
+        }
+    }
     private fun upload(){
 
-//        if(imageUri==null){
-//
-//            Toast.makeText(this@MainActivity,"Please Select andImage", Toast.LENGTH_LONG).show();
-//            return;
-//        }
+        if(imageUri==null){
+
+            Toast.makeText(this@MainActivity,"Error!", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         val filesDir=applicationContext.filesDir;
         val file =File(filesDir,"image.jpg")
@@ -74,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
            val response= retrofit.uploadImage(part);
             Log.d("SolarPanelAPI_EndPoint", response.toString())
+            responseTV.text=response.toString();
         }
 
     }
