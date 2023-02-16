@@ -24,6 +24,7 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -38,9 +39,9 @@ class MainActivity : AppCompatActivity() {
     lateinit var imageUri: Uri;
     lateinit var responseTV: TextView;
     val client = OkHttpClient.Builder()
-        .connectTimeout(720, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(720, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(720, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 //    private val contract=registerForActivityResult(ActivityResultContracts.TakePicture()){
 //        imageView.setImageURI(null)
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
 
 
         uploadBtn.setOnClickListener {
+            responseTV.text="Checking...(ETA 5mins)";
             upload()
         }
         galleryBtn.setOnClickListener {
@@ -91,16 +93,29 @@ class MainActivity : AppCompatActivity() {
         if(requestCode==111){
             var bmp:Bitmap=data?.extras?.get("data") as Bitmap;
 
+            if(bmp==null){
+                Toast.makeText(this@MainActivity,"Please capture the image",Toast.LENGTH_LONG).show();
+                return
+            }
 //            imageView.setImageBitmap(bmp);
             imageView.setImageURI(getImageUri(applicationContext, bmp))
+            responseTV.text="Click Upload to check Solar panel";
 
         }
         else if(requestCode==222){
 
             imageUri= data?.data!!;
+            if(imageUri==null){
+                Toast.makeText(this@MainActivity,"Please Select the image",Toast.LENGTH_LONG).show();
+                return
+            }
             imageView.setImageURI(null);
             imageView.setImageURI(data?.data);
+            responseTV.text=" Click Upload to check Solar panel ";
 
+        }
+        else{
+            Toast.makeText(this@MainActivity,"Error",Toast.LENGTH_LONG).show();
         }
 
     }
@@ -139,12 +154,14 @@ class MainActivity : AppCompatActivity() {
 
         val part =MultipartBody.Part.createFormData("File", file.name, requestBody);
 
-        val retrofit=Retrofit.Builder().baseUrl("http://classify.southindia.cloudapp.azure.com/").client(client).addConverterFactory(
-            GsonConverterFactory.create()
+        val retrofit=Retrofit.Builder().baseUrl("http://classify.southindia.cloudapp.azure.com/").client(client)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create()
         ).build().create(UploadService::class.java);
         CoroutineScope(Dispatchers.IO + coroutineExceptionHandler).launch {
            val response= retrofit.uploadImage(part);
             Log.d("SolarPanelAPI_EndPoint", response.toString())
+
             responseTV.text=response.toString();
         }
 
