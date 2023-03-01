@@ -52,6 +52,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:textAlignment="center"
         android:id="@+id/responseTV"
         android:layout_width="383dp"
         android:layout_height="125dp"

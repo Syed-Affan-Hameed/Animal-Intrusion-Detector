@@ -10,8 +10,8 @@ import retrofit2.http.Part
 interface UploadService {
 
     @Multipart
-    @POST("/Classify")
-
+//    @POST("/Classify")
+    @POST("/DetectAnimalIntrusion")
     suspend fun uploadImage(
 
         @Part image : MultipartBody.Part): String

@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -38,15 +39,23 @@ class MainActivity : AppCompatActivity() {
     lateinit var galleryBtn :Button;
     lateinit var imageUri: Uri;
     lateinit var responseTV: TextView;
+
+    var captureFlag=false;
+    var galleryFlag=false;
     val client = OkHttpClient.Builder()
         .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
         .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
         .build()
-//    private val contract=registerForActivityResult(ActivityResultContracts.TakePicture()){
-//        imageView.setImageURI(null)
-//        imageView.setImageURI(imageUri)
-//    }
+    private val contract=registerForActivityResult(ActivityResultContracts.TakePicture()){
+        if(imageUri==null){
+            Toast.makeText(this@MainActivity,"Please Select the image",Toast.LENGTH_LONG).show();
+        }
+
+        imageView.setImageURI(null)
+        imageView.setImageURI(imageUri)
+        captureFlag=true;
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -58,19 +67,20 @@ class MainActivity : AppCompatActivity() {
         imageUri=createImageUri()!!;
         responseTV=findViewById(R.id.responseTV)
 
-//            imageView.setImageURI(null);
+            imageView.setImageURI(null);
 //            contract.launch(imageUri);
             captureBtn.setOnClickListener {
-                var intent= Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(intent, 111);
+
+             contract.launch(imageUri)
             }
 
 
         uploadBtn.setOnClickListener {
-            responseTV.text="Checking...(ETA 5mins)";
+
             upload()
         }
         galleryBtn.setOnClickListener {
+
             val intent= Intent(Intent.ACTION_PICK);
             intent.type="image/*"
             startActivityForResult(intent, 222)
@@ -80,7 +90,7 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun createImageUri():Uri?{
-        val image= File(applicationContext.filesDir, "camera_photo.jpg");
+        val image= File(applicationContext.filesDir, "camera_photo1.jpg");
         return FileProvider.getUriForFile(
             applicationContext,
             "com.syed.solarpanelchecker.fileProvider",
@@ -104,19 +114,19 @@ class MainActivity : AppCompatActivity() {
         }
         else if(requestCode==222){
 
-            imageUri= data?.data!!;
-            if(imageUri==null){
+
+            if(data?.data==null){
                 Toast.makeText(this@MainActivity,"Please Select the image",Toast.LENGTH_LONG).show();
                 return
             }
+            imageUri= data?.data!!;
             imageView.setImageURI(null);
             imageView.setImageURI(data?.data);
+            galleryFlag=true;
             responseTV.text=" Click Upload to check Solar panel ";
 
         }
-        else{
-            Toast.makeText(this@MainActivity,"Error",Toast.LENGTH_LONG).show();
-        }
+
 
     }
 
@@ -133,6 +143,13 @@ class MainActivity : AppCompatActivity() {
         return Uri.parse(path)
     }
     private fun upload(){
+        if(!(captureFlag|| galleryFlag)){
+
+            responseTV.text="Please capture or pick image from gallery"
+
+        }else{
+            responseTV.text="Checking...";
+        }
 
         if(imageUri==null){
 
@@ -141,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val filesDir=applicationContext.filesDir;
-        val file =File(filesDir, "image.jpg")
+        val file =File(filesDir, "image1.jpg")
         val inputStream=contentResolver.openInputStream(imageUri);
         val outputStream=FileOutputStream(file);
         val coroutineExceptionHandler = CoroutineExceptionHandler{ _, throwable ->
@@ -149,6 +166,8 @@ class MainActivity : AppCompatActivity() {
         }
         inputStream!!.copyTo(outputStream);
 
+
+        //http://classify.southindia.cloudapp.azure.com/DetectAnimalIntrusion
 
         val requestBody =file.asRequestBody("image/*".toMediaTypeOrNull())
 
